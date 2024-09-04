@@ -1,3 +1,4 @@
+// Navigate between different sections
 function navigateTo(section) {
     document.querySelectorAll(".form-section").forEach(function (el) {
         el.style.display = "none";
@@ -5,6 +6,7 @@ function navigateTo(section) {
     document.getElementById(section).style.display = "block";
 }
 
+// Generate License Key and send to email
 function generateLicense() {
     const phoneNumber = document.getElementById('phoneNumber').value;
     const emailAddress = document.getElementById('emailAddress').value;
@@ -20,15 +22,21 @@ function generateLicense() {
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 
     xhr.onload = function() {
-        console.log("Response Text:", this.responseText); // Debugging: Log the full response text
+        console.log("Response Text (generateLicense):", this.responseText); // Log the full response text
 
         if (this.status === 200) {
             try {
-                const response = JSON.parse(this.responseText);
-                if (response.success) {
-                    renewalMessage.textContent = 'License key generated and sent to your email!';
+                const contentType = this.getResponseHeader("content-type") || "";
+                if (contentType.includes("application/json")) {
+                    const response = JSON.parse(this.responseText);
+                    if (response.success) {
+                        renewalMessage.textContent = 'License key generated and sent to your email!';
+                    } else {
+                        renewalMessage.textContent = response.message || 'Failed to generate license key.';
+                    }
                 } else {
-                    renewalMessage.textContent = response.message || 'Failed to generate license key.';
+                    renewalMessage.textContent = 'Unexpected response format received from the server.';
+                    console.error('Expected JSON but received:', this.responseText);
                 }
             } catch (e) {
                 console.error('Error parsing JSON:', e);
@@ -43,18 +51,17 @@ function generateLicense() {
     xhr.send(params);
 }
 
+// Activate License Key
 function activateLicense() {
     const key = document.getElementById("licenseKey").value;
     const message = document.getElementById("activationMessage");
 
-    // Make sure the license key is not empty
     if (!key) {
         message.textContent = "Activation failed. Please enter a valid key.";
         message.style.color = "red";
         return;
     }
 
-    // Send the license key to the PHP script
     fetch('license.php', {
         method: 'POST',
         headers: {
@@ -63,7 +70,18 @@ function activateLicense() {
         body: `license_key=${encodeURIComponent(key)}`,
     })
     .then(response => {
-        console.log("Response Text:", response); // Debugging: Log the full response
+        console.log("Response Status (activateLicense):", response.status);
+        console.log("Response Text (activateLicense):", response);
+        
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+            throw new Error('Received unexpected content type');
+        }
+        
         return response.json();
     })
     .then(data => {
@@ -71,10 +89,10 @@ function activateLicense() {
             message.textContent = `License activated successfully! Expiry Date: ${data.expiry_date}, Status: ${data.status}`;
             message.style.color = "green";
 
-            // Optionally, update the overview section with the new details
-            document.querySelector('.license-summary p:nth-child(2)').innerText = `Expiration Date: ${data.expiry_date}`;
-            document.querySelector('.license-summary p:nth-child(3)').innerText = `License Key: ${data.license_key}`;
-            document.querySelector('.license-summary p:nth-child(4)').innerText = `Status: ${data.status}`;
+            // Update license overview details
+            document.querySelector('#licenseExpiry').innerText = data.expiry_date;
+            document.querySelector('#licenseKeyDisplay').innerText = data.license_key;
+            document.querySelector('#licenseStatus').innerText = data.status;
         } else {
             message.textContent = `Activation failed: ${data.message}`;
             message.style.color = "red";
@@ -87,5 +105,11 @@ function activateLicense() {
     });
 }
 
-// Add event listeners to buttons or form submissions as needed
+// Add event listener for form submission to generate license key
+document.getElementById('renewLicenseForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    generateLicense();
+});
+
+// Add event listener to the activate button for activating the license
 document.getElementById('activateButton').addEventListener('click', activateLicense);

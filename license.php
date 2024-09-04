@@ -42,13 +42,15 @@ function sendLicenseKeyEmail($to, $licenseKey) {
         $mail->AltBody = "Thank you for your purchase. Your license key is: $licenseKey";
 
         $mail->send();
-        echo 'Message has been sent';
+        return true;
     } catch (Exception $e) {
-        echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+        // Handle email error by returning false and the error message
+        return "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Check if the request is to check an existing license
     if (isset($_POST['check_license'])) {
         // Check if the license key exists in the database and is active
         $stmt = $pdo->prepare("SELECT status, expiry_date FROM llx_licencing_table WHERE status = 'Active'");
@@ -63,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Generate new license
     if (isset($_POST['generate_license'])) {
         // Capture form data
         $phoneNumber = trim($_POST['phone_number']);
@@ -82,46 +85,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("INSERT INTO llx_licencing_table (license_key, status, expiry_date) VALUES (?, ?, ?)");
         if ($stmt->execute([$generatedLicenseKey, $status, $expiryDate])) {
             // Send the generated license key via email
-            sendLicenseKeyEmail($emailAddress, $generatedLicenseKey);
-
-            // Provide feedback to the user
-            echo json_encode(['success' => true, 'message' => 'License key generated and sent to the provided email address.']);
+            $emailResult = sendLicenseKeyEmail($emailAddress, $generatedLicenseKey);
+            
+            if ($emailResult === true) {
+                // Provide feedback to the user
+                echo json_encode(['success' => true, 'message' => 'License key generated and sent to the provided email address.']);
+            } else {
+                echo json_encode(['success' => false, 'message' => $emailResult]);
+            }
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to generate license key.']);
         }
         exit;
     }
 
-    $licenseKey = trim($_POST['license_key']);
+    // License activation process
+    if (isset($_POST['license_key'])) {
+        $licenseKey = trim($_POST['license_key']);
 
-    if (empty($licenseKey)) {
-        echo json_encode(['success' => false, 'message' => 'License key cannot be empty.']);
-        exit;
-    }
+        if (empty($licenseKey)) {
+            echo json_encode(['success' => false, 'message' => 'License key cannot be empty.']);
+            exit;
+        }
 
-    // Remove Keygen validation since we're generating our own keys
-    // Now directly check if the license key exists in your database
-    $stmt = $pdo->prepare("SELECT status, expiry_date FROM llx_licencing_table WHERE license_key = ?");
-    $stmt->execute([$licenseKey]);
-    $license = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Check if the license key exists in your database
+        $stmt = $pdo->prepare("SELECT status, expiry_date FROM llx_licencing_table WHERE license_key = ?");
+        $stmt->execute([$licenseKey]);
+        $license = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($license) {
-        echo json_encode(['success' => true, 'expiry_date' => $license['expiry_date'], 'license_key' => $licenseKey, 'status' => $license['status']]);
-    } else {
-        // Generate a new license key since it doesn't exist in the database
-        $generatedLicenseKey = generateLicenseKey();
-        $expiryDate = date('Y-m-d H:i:s', strtotime('+1 year'));
-        $status = 'Active';
-        $stmt = $pdo->prepare("INSERT INTO llx_licencing_table (license_key, status, expiry_date) VALUES (?, ?, ?)");
-
-        if ($stmt->execute([$generatedLicenseKey, $status, $expiryDate])) {
-            // Send the generated license key via email
-            sendLicenseKeyEmail($emailAddress, $generatedLicenseKey);
-
-            echo json_encode(['success' => true, 'expiry_date' => $expiryDate, 'license_key' => $generatedLicenseKey, 'status' => $status]);
+        if ($license) {
+            echo json_encode(['success' => true, 'expiry_date' => $license['expiry_date'], 'license_key' => $licenseKey, 'status' => $license['status']]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to insert license key.']);
+            // License key doesn't exist, return an error
+            echo json_encode(['success' => false, 'message' => 'License key not found.']);
         }
     }
 }
-?>

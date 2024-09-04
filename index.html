@@ -23,6 +23,7 @@
         <button class="button" onclick="navigateTo('history')">View License History</button>
       </div>
 
+      <!-- License Activation Form -->
       <div id="activate" class="form-section" style="display: none">
         <h2>Enter License Key</h2>
         <input type="text" id="licenseKey" placeholder="Enter License Key" />
@@ -30,12 +31,15 @@
         <p id="activationMessage"></p>
       </div>
 
+      <!-- License Renewal Form -->
       <div id="renew" class="form-section" style="display: none">
         <h2>Renew License</h2>
-        <input type="number" id="phoneNumber" name="phone_number" placeholder="Enter Phone Number" required />
-        <input type="email" id="emailAddress" name="email_address" placeholder="Enter Email Address" required />
-        <br>
-        <button class="button" onclick="generateLicense()">Generate License Key</button>
+        <form id="renewLicenseForm">
+          <input type="number" id="phoneNumber" name="phone_number" placeholder="Enter Phone Number" required />
+          <input type="email" id="emailAddress" name="email_address" placeholder="Enter Email Address" required />
+          <br>
+          <button class="button" type="submit">Generate License Key</button>
+        </form>
         <p id="renewalMessage"></p>
       </div>
 
@@ -54,5 +58,15 @@
     </div>
 
     <script src="index.js"></script>
+    <script>
+          document.addEventListener('DOMContentLoaded', function() {
+          const activateButton = document.getElementById('activateButton');
+          if (activateButton) {
+              activateButton.addEventListener('click', activateLicense);
+          } else {
+              console.error('activateButton not found');
+          }
+      });
+  </script>
   </body>
 </html>
