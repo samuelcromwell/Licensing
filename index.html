@@ -20,14 +20,14 @@
         <p><strong>Licensed Users:</strong> <span id="licensedUsersCount">0</span></p>
         <button class="button" onclick="navigateTo('renew')">Renew License</button>
         <button class="button" onclick="navigateTo('activate')">Enter License Key</button>
-        <button class="button" onclick="navigateTo('history')">View License History</button>
+        <button class="button" onclick="viewLicenseHistory()">View License History</button>
       </div>
 
       <!-- License Activation Form -->
       <div id="activate" class="form-section" style="display: none">
         <h2>Enter License Key</h2>
         <input type="text" id="licenseKey" placeholder="Enter License Key" />
-        <button class="button" onclick="activateLicense()">Activate</button>
+        <button class="button" button id="activateButton" onclick="activateLicense()">Activate</button>
         <p id="activationMessage"></p>
       </div>
 
@@ -52,7 +52,10 @@
             <th>Expiration Date</th>
             <th>Status</th>
           </tr>
+          </thead>
+          <tbody>
           <!-- Dynamic content would be inserted here -->
+          </tbody>
         </table>
       </div>
     </div>

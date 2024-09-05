@@ -105,6 +105,50 @@ function activateLicense() {
     });
 }
 
+function viewLicenseHistory() {
+    const emailAddress = document.getElementById('emailAddress').value;
+    const historyTable = document.querySelector('.license-history-table tbody');
+
+    if (!emailAddress) {
+        alert('Please enter your email address to view the license history.');
+        return;
+    }
+
+    fetch('license.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'view_license_history': true,
+            'email_address': emailAddress
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Clear the table first
+            historyTable.innerHTML = '';
+
+            // Populate the table with license history
+            data.licenses.forEach(license => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${license.created_at}</td>
+                    <td>${license.license_key}</td>
+                    <td>${license.expiry_date}</td>
+                    <td>${license.status}</td>
+                `;
+                historyTable.appendChild(row);
+            });
+        } else {
+            historyTable.innerHTML = `<tr><td colspan="4">${data.message}</td></tr>`;
+        }
+    })
+    .catch(error => console.error('Error fetching license history:', error));
+}
+
+
 // Add event listener for form submission to generate license key
 document.getElementById('renewLicenseForm').addEventListener('submit', function(event) {
     event.preventDefault();
